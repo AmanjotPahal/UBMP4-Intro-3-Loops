@@ -1,8 +1,10 @@
+
 /*==============================================================================
- Project: UBMP4-Simon-Starter
- Date:    January 12, 2022
+ Project: UBMP4-Simon-Starter-Game
+ Date:    January 24, 2022
  
-  A Simon-style pattern matching game starter framework.
+  A Simon-style pattern matching game starter framework with complete game play.
+  Just add startup, winning, and losing sound and light effects.
  ==============================================================================*/
  
 #include    "xc.h"              // Microchip XC8 compiler include file
@@ -31,6 +33,7 @@ unsigned int idle = 0;          // In-game idle timer for shutdown
 extern int rand();              // Declarations for random number generation
 extern void srand(unsigned int);
 unsigned int newSeed;           // New random number generator seed values
+unsigned char ticks;            // Random delay ticks 
  
 /*==============================================================================
  Interrupt function. Processes IOC interrupts and wakes game from nap/sleep.
@@ -73,7 +76,26 @@ void nap(void)
  
 unsigned char getButton(void)       // Return code of pressed button or 0 if
 {                                   // no buttons are pressed
- 
+    if(SW2 == pressed)
+    {
+        return(1);
+    }
+    else if(SW3 == pressed)
+    {
+        return(2);
+    }
+    else if(SW4 == pressed)
+    {
+        return(3);
+    }
+    else if(SW5 == pressed)
+    {
+        return(4);
+    }
+    else
+    {
+        return(0);
+    }
 }
  
 /*==============================================================================
@@ -82,7 +104,29 @@ unsigned char getButton(void)       // Return code of pressed button or 0 if
  
 void LED(unsigned char num)
 {
- 
+    if(num == 1)
+    {
+        LED3 = 1;
+    }
+    else if(num == 2)
+    {
+        LED4 = 1;
+    }
+    else if(num == 3)
+    {
+        LED5 = 1;
+    }
+    else if(num == 4)
+    {
+        LED6 = 1;
+    }
+    else
+    {
+        LED3 = 0;
+        LED4 = 0;
+        LED5 = 0;
+        LED6 = 0;
+    }
 }
  
 /*==============================================================================
@@ -143,19 +187,65 @@ void sound(unsigned char num)   // Play selected note sound
  
 void startSound(void)           // Game start-up sound
 {
- 
+    LED(1);
+    noteA5(100);
+    noteCS6(200);
+    noteE6(100);
+    LED(0);
 }
  
 void win(void)                  // Game win function
 {
+    LED(3);
+    noteE6(150);
+    LED(0);
+    noteCS6(100);
+    LED(2);
+    noteA5(50);
+    LED(0);
  
 	nap();                      // Shutdown
 }
  
 void lose(void)                 // Pattern fail. Game lose function
-{
+{ 
+    LED(4);
+    noteE5(25);
+    noteE6(50);
+    LED(0);
+    noteCS6(200);
+    LED(1);
+    noteA5(250)
+    LED(0);
+         
                                 // Sounds, lights?
-                                // Show score?
+ 
+
+    while(maxStep >= 10)        // Show score - tens digits
+    {
+        LED(1);
+        __delay_ms(500);
+        LED(0);
+        __delay_ms(500);
+        maxStep = maxStep - 10;
+    }
+    while(maxStep >= 5)         // Show score - fives digit
+    {
+        LED(2);
+        __delay_ms(500);
+        LED(0);
+        __delay_ms(500);
+        maxStep = maxStep - 5;
+    }
+    while(maxStep > 0)          // Show score - ones digits
+    {
+        LED(3);
+        __delay_ms(500);
+        LED(0);
+        __delay_ms(500);
+        maxStep = maxStep - 1;
+    }
+    
 	nap();                      // Power down
 }
  
@@ -168,14 +258,17 @@ int main(void)
     OSC_config();               // Configure internal oscillator for 48 MHz
     UBMP4_config();             // Configure on-board UBMP4 I/O devices
     
-//    LED1 = 1;                   // Wait for a button press
-//    while(SW2 == !pressed && SW3 == !pressed && SW4 == !pressed && SW5 == !pressed);
-//    LED1 = 0;                   // LED on, play start sound
-//    startSound();
-//    while(SW2 == pressed || SW3 == pressed || SW4 == pressed || SW5 == pressed);
+    LED1 = 1;                   // Wait for a button press
+    while(SW2 == !pressed && SW3 == !pressed && SW4 == !pressed && SW5 == !pressed);
+    {
+        ticks++;
+    }
+    LED1 = 0;                   // LED on, play start sound
+    startSound();
+    while(SW2 == pressed || SW3 == pressed || SW4 == pressed || SW5 == pressed);
  
     // Initialize the random number generator
-    randomSeed = TMR0;   		// Generate random number from timer
+    randomSeed = TMR0 ^ ticks;  // Generate random number from timer
 	newSeed = (newSeed << 8 ) | randomSeed; // Mix previous seed with random sample
 	srand(newSeed);             // Seed random number generator
     
@@ -185,35 +278,78 @@ int main(void)
 	{
         // Button and light test code
         
-		button = getButton();   // Button test code
-		LED(button);
-        sound(button);
-		LED(0);
- 
-        // Activate bootloader if SW1 is pressed.
-        if(SW1 == 0)
-        {
-            RESET();
-        }
+//		button = getButton();   // Button test code
+//		LED(button);
+//        sound(button);
+//		LED(0);
+//
+//        // Activate bootloader if SW1 is pressed.
+//        if(SW1 == 0)
+//        {
+//            RESET();
+//        }
  
         // Add a new step and play the pattern for the user
         
-//		__delay_ms(1000);       // Delay before playing next pattern
-//		pattern[maxStep] = (rand() & 0b00000011) + 1;   // Pick next pattern step
-//		maxStep++;              // Increase step count and check if user won
-//		if(maxStep == (patternLength + 1))       
-//			win();
-//		for(step = 0; step != maxStep; step++)  // Play each pattern step
-//		{
-//			LED(pattern[step]);
-//			sound(pattern[step]);
-//			LED(0);
-//			__delay_ms(500);
-//		}
+		__delay_ms(1000);       // Delay before playing next pattern
+		pattern[maxStep] = (rand() & 0b00000011) + 1;   // Pick next pattern step
+		maxStep++;              // Increase step count and check if user won
+		if(maxStep == (patternLength + 1))       
+			win();
+		for(step = 0; step != maxStep; step++)  // Play each pattern step
+		{
+			LED(pattern[step]);
+			sound(pattern[step]);
+			LED(0);
+			__delay_ms(500);
+		}
 		
         // Let user repeat the pattern, comparing each step to the saved pattern
         
+		step = 0;               // Reset step count before user matching attempt
  
+		while(step != maxStep)
+		{
+            idle = 0;               // Reset idle timer for each user guess
+			button = getButton();   // Is a button pressed?
+			while(button == 0)      // No, wait for button press
+			{
+				button = getButton();
+                __delay_ms(50);
+                idle++;     // Increment idle timer to check for shutdown
+                if(idle == timeOut)
+                {
+                    nap();
+                }
+			}
+			LED(button);        // Show button and play sound for each guess
+			sound(button);
+			LED(0);
+			
+			if(button != pattern[step])
+			{
+				__delay_ms(500);
+				lose();         // Uh, oh. Button didn't match pattern
+			}
+			step++;             // Pattern matches! Go on to the next step
+			
+            idle = 0;           // Reset idle timer.
+			while(getButton() != 0) // Wait for button release
+            {
+                __delay_ms(50);
+                idle++;          // Increment idle timer to check for shutdown
+                if(idle == timeOut)
+                {
+                    nap();
+                }
+            }
+            
+            randomSeed = TMR0;      // Update random seed from fast timer
+		}
 	}
 }
  
+ 
+ 
+
+
